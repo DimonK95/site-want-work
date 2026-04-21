@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Подбор работы</title>
+    <meta name="description" content="Поиск вакансий hh.ru по живому описанию навыков." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css?v=20260421b" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero__noise"></div>
+        <div class="hero__orb hero__orb--violet"></div>
+        <div class="hero__orb hero__orb--cyan"></div>
+        <div class="hero__topline">
+          <span class="brand">Подбор работы</span>
+          <span class="brand-note">данные hh.ru</span>
+        </div>
+        <div class="hero__content">
+          <div class="hero__copy">
+            <p class="eyebrow">Умный поиск</p>
+            <h1>Работа под тебя.</h1>
+            <p class="hero__lead">Город, формат, что умеешь.</p>
+          </div>
+          <div class="hero__preview">
+            <div class="preview-card">
+              <span class="preview-card__label">Запрос</span>
+              <strong id="hero-preview-title">дизайн / lead / analytics</strong>
+              <p id="hero-preview-text">Опиши себя и получи подборку.</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel panel--form">
+          <form id="search-form" class="search-form">
+            <label class="field">
+              <span>Формат</span>
+              <div class="segmented">
+                <button type="button" class="segmented__option is-active" data-mode="remote">
+                  Удаленно
+                </button>
+                <button type="button" class="segmented__option" data-mode="city">
+                  В городе
+                </button>
+              </div>
+            </label>
+
+            <label class="field is-hidden" id="location-field">
+              <span>Город</span>
+              <input
+                id="location"
+                name="location"
+                type="text"
+                placeholder="Москва"
+                autocomplete="off"
+              />
+            </label>
+
+            <label class="field">
+              <span>Тип</span>
+              <div class="chips" id="job-type">
+                <button type="button" class="chip is-active" data-job-type="all">Все</button>
+                <button type="button" class="chip" data-job-type="project">Проекты</button>
+                <button type="button" class="chip" data-job-type="fulltime">Full-time</button>
+              </div>
+            </label>
+
+            <label class="field">
+              <span>Запрос</span>
+              <textarea
+                id="prompt"
+                name="prompt"
+                rows="7"
+                placeholder="Умею рисовать баннеры и лендинги"
+              ></textarea>
+            </label>
+
+            <button type="submit" class="cta">Найти</button>
+          </form>
+        </section>
+
+        <section class="panel panel--results">
+          <div class="panel__top">
+            <div>
+              <p class="panel__eyebrow">Результат</p>
+              <h2 id="summary">Пока пусто</h2>
+            </div>
+            <div class="panel__badge" id="panel-badge">hh.ru</div>
+          </div>
+
+          <div class="magic-box" id="magic-box">
+            <div class="magic-box__state">
+              <div class="pulse"></div>
+              <p>Опиши себя.</p>
+            </div>
+          </div>
+
+          <div class="results-meta" id="results-meta"></div>
+          <div class="results-grid" id="results"></div>
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="job-card-template">
+      <article class="job-card">
+        <div class="job-card__top">
+          <div>
+            <p class="job-card__source"></p>
+            <h3></h3>
+          </div>
+          <span class="job-card__score"></span>
+        </div>
+        <p class="job-card__company"></p>
+        <p class="job-card__details"></p>
+        <p class="job-card__snippet"></p>
+        <a class="job-card__link" target="_blank" rel="noreferrer">Открыть</a>
+      </article>
+    </template>
+
+    <script src="/app.js?v=20260421b" defer></script>
+  </body>
+  </html>

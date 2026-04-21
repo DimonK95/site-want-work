@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Spell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070b16;
+        --bg-soft: #0d1222;
+        --panel: rgba(8, 13, 27, 0.72);
+        --panel-strong: rgba(12, 19, 36, 0.86);
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.14);
+        --text: #f4f7ff;
+        --muted: #95a0c2;
+        --accent: #8a7dff;
+        --accent-2: #43d7ff;
+        --accent-3: #c5d2ff;
+        --shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+        --radius-xl: 34px;
+        --radius-lg: 26px;
+        --radius-md: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(138, 125, 255, 0.24), transparent 28%),
+          radial-gradient(circle at 80% 10%, rgba(67, 215, 255, 0.18), transparent 24%),
+          linear-gradient(180deg, #060914 0%, #090f1d 48%, #07101d 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: radial-gradient(circle at center, black 45%, transparent 92%);
+        pointer-events: none;
+      }
+
+      .page-shell {
+        width: min(1240px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 22px 0 48px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: 40px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+          rgba(7, 12, 24, 0.78);
+        box-shadow: var(--shadow);
+      }
+
+      .hero__noise {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(rgba(255, 255, 255, 0.08) 0.8px, transparent 0.8px);
+        background-size: 14px 14px;
+        opacity: 0.045;
+      }
+
+      .hero__orb {
+        position: absolute;
+        width: 340px;
+        height: 340px;
+        border-radius: 999px;
+        filter: blur(24px);
+        opacity: 0.7;
+      }
+
+      .hero__orb--violet {
+        top: -140px;
+        right: -30px;
+        background: rgba(138, 125, 255, 0.34);
+      }
+
+      .hero__orb--cyan {
+        left: -110px;
+        bottom: -170px;
+        background: rgba(67, 215, 255, 0.18);
+      }
+
+      .hero__topline,
+      .panel__top,
+      .job-card__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .hero__topline {
+        position: relative;
+        z-index: 1;
+        margin-bottom: 36px;
+      }
+
+      .brand,
+      .brand-note,
+      .panel__badge,
+      .preview-card__label,
+      .job-card__source,
+      .panel__eyebrow,
+      .eyebrow {
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.76rem;
+      }
+
+      .brand {
+        font-weight: 700;
+      }
+
+      .brand-note,
+      .panel__badge,
+      .preview-card__label,
+      .job-card__source,
+      .panel__eyebrow,
+      .eyebrow,
+      .results-meta,
+      .job-card__company,
+      .job-card__details,
+      .job-card__snippet,
+      .magic-box__state p,
+      .magic-summary__text {
+        color: var(--muted);
+      }
+
+      .panel__badge,
+      .brand-note {
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .hero__content {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 24px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--accent-2);
+      }
+
+      h1 {
+        max-width: 620px;
+        margin: 0;
+        font-size: clamp(3.2rem, 7vw, 6.6rem);
+        line-height: 0.92;
+        letter-spacing: -0.07em;
+      }
+
+      .hero__lead {
+        margin: 16px 0 0;
+        font-size: 1.02rem;
+        color: var(--muted);
+      }
+
+      .preview-card {
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+        backdrop-filter: blur(18px);
+      }
+
+      .preview-card strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 1rem;
+      }
+
+      .preview-card p {
+        margin: 10px 0 0;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .panel {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+          var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .panel--results {
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+          var(--panel-strong);
+      }
+
+      .panel__top h2 {
+        margin: 6px 0 0;
+        font-size: 1.55rem;
+      }
+
+      .search-form {
+        display: grid;
+        gap: 16px;
+      }
+
+      .field {
+        display: grid;
+        gap: 10px;
+      }
+
+      .field span {
+        font-size: 0.9rem;
+        color: var(--accent-3);
+      }
+
+      .is-hidden {
+        display: none;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(149, 160, 194, 0.62);
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: rgba(67, 215, 255, 0.55);
+        box-shadow: 0 0 0 4px rgba(67, 215, 255, 0.08);
+      }
+
+      textarea {
+        min-height: 180px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+
+      .segmented,
+      .chips,
+      .magic-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .segmented__option,
+      .chip {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        padding: 12px 15px;
+        border-radius: 999px;
+        font: inherit;
+        cursor: pointer;
+        transition: 180ms ease;
+      }
+
+      .segmented__option:hover,
+      .chip:hover,
+      .segmented__option.is-active,
+      .chip.is-active {
+        border-color: rgba(138, 125, 255, 0.6);
+        background: rgba(138, 125, 255, 0.14);
+        box-shadow: inset 0 0 0 1px rgba(138, 125, 255, 0.15);
+      }
+
+      .cta {
+        appearance: none;
+        border: 0;
+        padding: 16px 20px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #8a7dff, #43d7ff);
+        color: #07101d;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 18px 50px rgba(67, 215, 255, 0.18);
+      }
+
+      .magic-box {
+        margin-top: 22px;
+        min-height: 150px;
+        padding: 20px;
+        border-radius: 26px;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(circle at top right, rgba(138, 125, 255, 0.18), transparent 38%),
+          radial-gradient(circle at bottom left, rgba(67, 215, 255, 0.12), transparent 36%),
+          rgba(255, 255, 255, 0.028);
+      }
+
+      .magic-box__state {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 108px;
+      }
+
+      .pulse {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 0 0 rgba(138, 125, 255, 0.42);
+        animation: pulse 2.2s infinite;
+      }
+
+      .magic-summary__headline {
+        margin: 0;
+        font-size: 1.28rem;
+      }
+
+      .magic-summary__text {
+        margin: 8px 0 0;
+        line-height: 1.6;
+      }
+
+      .magic-tags {
+        margin-top: 16px;
+      }
+
+      .magic-tag {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--accent-3);
+        font-size: 0.88rem;
+      }
+
+      .results-meta {
+        margin-top: 16px;
+        min-height: 22px;
+        font-size: 0.94rem;
+        line-height: 1.6;
+      }
+
+      .results-grid {
+        display: grid;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .results-grid--widget {
+        display: block;
+      }
+
+      .hh-widget-host {
+        min-height: 430px;
+      }
+
+      .hh-widget-host .hh-script {
+        display: none;
+      }
+
+      .job-card {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      }
+
+      .job-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--line-strong);
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .job-card h3 {
+        margin: 4px 0 0;
+        font-size: 1.12rem;
+      }
+
+      .job-card__score {
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 0.82rem;
+        color: var(--accent-3);
+      }
+
+      .job-card__company,
+      .job-card__details,
+      .job-card__snippet {
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .job-card__link {
+        color: var(--accent-2);
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .job-card__link:hover {
+        text-decoration: underline;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(138, 125, 255, 0.42);
+        }
+        70% {
+          box-shadow: 0 0 0 18px rgba(138, 125, 255, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(138, 125, 255, 0);
+        }
+      }
+
+      @media (max-width: 980px) {
+        .hero__content,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 3.5rem;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page-shell {
+          width: min(100% - 18px, 1240px);
+        }
+
+        .hero,
+        .panel {
+          padding: 18px;
+        }
+
+        h1 {
+          font-size: 2.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero__noise"></div>
+        <div class="hero__orb hero__orb--violet"></div>
+        <div class="hero__orb hero__orb--cyan"></div>
+        <div class="hero__topline">
+          <span class="brand">Job Spell</span>
+          <span class="brand-note" id="hero-source">hh.ru</span>
+        </div>
+        <div class="hero__content">
+          <div class="hero__copy">
+            <p class="eyebrow">AI search</p>
+            <h1>Работа под тебя.</h1>
+            <p class="hero__lead">Город, формат, что умеешь.</p>
+          </div>
+          <div class="hero__preview">
+            <div class="preview-card">
+              <span class="preview-card__label">Intent</span>
+              <strong id="hero-preview-title">дизайн / lead / analytics</strong>
+              <p id="hero-preview-text">Опиши себя и получи подборку.</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel">
+          <form id="search-form" class="search-form">
+            <label class="field">
+              <span>Формат</span>
+              <div class="segmented">
+                <button type="button" class="segmented__option is-active" data-mode="remote">Удаленно</button>
+                <button type="button" class="segmented__option" data-mode="city">В городе</button>
+              </div>
+            </label>
+
+            <label class="field is-hidden" id="location-field">
+              <span>Город</span>
+              <input id="location" type="text" placeholder="Москва" />
+            </label>
+
+            <label class="field">
+              <span>Тип</span>
+              <div class="chips">
+                <button type="button" class="chip is-active" data-job-type="all">Все</button>
+                <button type="button" class="chip" data-job-type="project">Проекты</button>
+                <button type="button" class="chip" data-job-type="fulltime">Full-time</button>
+              </div>
+            </label>
+
+            <label class="field">
+              <span>Запрос</span>
+              <textarea id="prompt" rows="7" placeholder="Умею рисовать баннеры и лендинги"></textarea>
+            </label>
+
+            <button type="submit" class="cta">Найти</button>
+          </form>
+        </section>
+
+        <section class="panel panel--results">
+          <div class="panel__top">
+            <div>
+              <p class="panel__eyebrow">Result</p>
+              <h2 id="summary">Пока пусто</h2>
+            </div>
+            <div class="panel__badge" id="panel-badge">hh.ru</div>
+          </div>
+
+          <div class="magic-box" id="magic-box">
+            <div class="magic-box__state">
+              <div class="pulse"></div>
+              <p>Опиши себя.</p>
+            </div>
+          </div>
+
+          <div class="results-meta" id="results-meta"></div>
+          <div class="results-grid" id="results"></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const ROLE_PATTERNS = [
+        {
+          id: "design",
+          label: "Дизайн",
+          query: "designer OR graphic designer OR ui ux designer OR бренд-дизайнер",
+          words: ["дизайн", "баннер", "бренд", "лендинг", "figma", "ui", "ux", "график", "иллюстр"]
+        },
+        {
+          id: "management",
+          label: "Менеджмент",
+          query: "project manager OR product manager OR team lead OR delivery manager",
+          words: ["руковод", "менедж", "lead", "лид", "управ", "product", "project", "delivery"]
+        },
+        {
+          id: "frontend",
+          label: "Frontend",
+          query: "frontend OR react OR javascript OR typescript",
+          words: ["frontend", "react", "javascript", "typescript", "верст", "фронтенд"]
+        },
+        {
+          id: "backend",
+          label: "Backend",
+          query: "backend OR node.js OR python OR golang OR java",
+          words: ["backend", "node", "python", "golang", "java", "бекенд", "api", "сервер"]
+        },
+        {
+          id: "marketing",
+          label: "Маркетинг",
+          query: "marketing OR smm OR content manager",
+          words: ["маркет", "smm", "контент", "трафик", "реклама", "seo"]
+        },
+        {
+          id: "analytics",
+          label: "Аналитика",
+          query: "analyst OR data analyst OR business analyst",
+          words: ["аналит", "sql", "дашборд", "bi", "данн", "excel"]
+        }
+      ];
+
+      const form = document.getElementById("search-form");
+      const promptInput = document.getElementById("prompt");
+      const locationInput = document.getElementById("location");
+      const locationField = document.getElementById("location-field");
+      const summaryNode = document.getElementById("summary");
+      const magicBox = document.getElementById("magic-box");
+      const resultsMeta = document.getElementById("results-meta");
+      const resultsNode = document.getElementById("results");
+      const panelBadge = document.getElementById("panel-badge");
+      const heroPreviewTitle = document.getElementById("hero-preview-title");
+      const heroPreviewText = document.getElementById("hero-preview-text");
+      const heroSource = document.getElementById("hero-source");
+      const API_BASE = "http://127.0.0.1:3000";
+      let hhWidgetNonce = 0;
+
+      let currentMode = "remote";
+      let currentJobType = "all";
+
+      function tokenize(text) {
+        return String(text || "")
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}\s+#./-]+/gu, " ")
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      function unique(items) {
+        return [...new Set(items.filter(Boolean))];
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function syncLocationVisibility() {
+        const hidden = currentMode === "remote";
+        locationField.classList.toggle("is-hidden", hidden);
+        if (hidden) {
+          locationInput.value = "";
+        }
+      }
+
+      function parseIntent({ prompt = "", location = "", mode = "remote", jobType = "all" }) {
+        const tokens = tokenize([prompt, location].join(" "));
+        const tokenText = tokens.join(" ");
+        const matchedRoles = ROLE_PATTERNS.filter((role) => role.words.some((word) => tokenText.includes(word)));
+        const strongWords = unique(tokens.filter((token) => token.length > 3 && !["удаленно", "remote", "full", "time"].includes(token)));
+        const skillHints = unique(matchedRoles.map((role) => role.label).concat(strongWords.slice(0, 6))).slice(0, 6);
+        const queryCore = matchedRoles.map((role) => role.query).join(" OR ") || strongWords.slice(0, 5).join(" ");
+        const queryParts = [queryCore];
+
+        if (mode === "remote") queryParts.push("удаленно remote");
+        if (location && mode === "city") queryParts.push(location);
+        if (jobType === "project") queryParts.push("проект freelance contract");
+        if (jobType === "fulltime") queryParts.push("full time fulltime штат");
+
+        const mood = matchedRoles[0]?.label || (jobType === "project" ? "Проекты" : "Подходящие вакансии");
+
+        return {
+          mood,
+          summary: mode === "remote" ? `Удаленно · ${mood}` : `${location || "Город"} · ${mood}`,
+          roleLabels: matchedRoles.map((role) => role.label),
+          skills: skillHints,
+          query: queryParts.filter(Boolean).join(" ").trim(),
+          mode,
+          jobType,
+          location
+        };
+      }
+
+      async function fetchRealJobs(intent) {
+        const response = await fetch(`${API_BASE}/api/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          }
+          ,
+          body: JSON.stringify({
+            prompt: promptInput.value.trim(),
+            location: locationInput.value.trim(),
+            mode: currentMode,
+            jobType: currentJobType
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`search failed ${response.status}`);
+        }
+
+        return response.json();
+      }
+
+      function buildFallback(intent) {
+        const title = intent.roleLabels[0] || "Специалист";
+        const place = intent.mode === "remote" ? "Удаленно" : intent.location || "Москва";
+
+        return [
+          {
+            id: "fallback-1",
+            source: "fallback",
+            title: `${title} в продуктовую команду`,
+            company: "Studio One",
+            location: place,
+            format: intent.mode === "remote" ? "Удаленно" : "Гибрид",
+            salary: intent.jobType === "project" ? "от 90 000 ₽ за проект" : "от 180 000 ₽",
+            url: "https://hh.ru/search/vacancy",
+            snippet: "Показываю запасной вариант, пока hh.ru временно недоступен.",
+            score: 74
+          }
+        ];
+      }
+
+      function renderMagic(intent) {
+        const tags = [...intent.roleLabels, ...intent.skills].slice(0, 6);
+        heroPreviewTitle.textContent = tags.join(" / ") || "custom search";
+        heroPreviewText.textContent = intent.summary;
+        magicBox.innerHTML = `
+          <div class="magic-summary">
+            <p class="magic-summary__headline">${escapeHtml(intent.mood)}</p>
+            <p class="magic-summary__text">${escapeHtml(intent.summary)}</p>
+            <div class="magic-tags">
+              ${tags.map((tag) => `<span class="magic-tag">${escapeHtml(tag)}</span>`).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderJobs(jobs) {
+        resultsNode.classList.remove("results-grid--widget");
+        resultsNode.innerHTML = jobs
+          .map((job) => `
+            <article class="job-card">
+              <div class="job-card__top">
+                <div>
+                  <p class="job-card__source">${escapeHtml(job.source)}</p>
+                  <h3>${escapeHtml(job.title)}</h3>
+                </div>
+                <span class="job-card__score">match ${Math.max(72, job.score)}%</span>
+              </div>
+              <p class="job-card__company">${escapeHtml(job.company)}</p>
+              <p class="job-card__details">${escapeHtml(job.location)} · ${escapeHtml(job.format)} · ${escapeHtml(job.salary)}</p>
+              <p class="job-card__snippet">${job.snippet}</p>
+              <a class="job-card__link" target="_blank" rel="noreferrer" href="${escapeHtml(job.url)}">Открыть</a>
+            </article>
+          `)
+          .join("");
+      }
+
+      function buildWidgetQuery(intent) {
+        const parts = [];
+
+        if (intent.query) parts.push(intent.query);
+        if (currentMode === "city" && locationInput.value.trim()) parts.push(locationInput.value.trim());
+
+        return parts.filter(Boolean).join(" ");
+      }
+
+      function renderHHWidget(intent) {
+        const query = buildWidgetQuery(intent);
+        const widgetUrl = new URL("https://api.hh.ru/widgets/vacancies/search");
+        widgetUrl.searchParams.set("text", query || "дизайнер");
+        widgetUrl.searchParams.set("debug_mode", "true");
+
+        resultsNode.classList.add("results-grid--widget");
+        resultsNode.innerHTML = '<div class="hh-widget-host" id="hh-widget-host"></div>';
+
+        const host = document.getElementById("hh-widget-host");
+        const script = document.createElement("script");
+        script.className = "hh-script";
+        script.async = true;
+        script.dataset.widgetId = String(++hhWidgetNonce);
+        script.src = widgetUrl.toString();
+        host.appendChild(script);
+      }
+
+      document.querySelectorAll(".segmented__option").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".segmented__option").forEach((node) => node.classList.remove("is-active"));
+          button.classList.add("is-active");
+          currentMode = button.dataset.mode;
+          syncLocationVisibility();
+        });
+      });
+
+      document.querySelectorAll(".chip").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".chip").forEach((node) => node.classList.remove("is-active"));
+          button.classList.add("is-active");
+          currentJobType = button.dataset.jobType;
+        });
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const payload = {
+          prompt: promptInput.value.trim(),
+          location: locationInput.value.trim(),
+          mode: currentMode,
+          jobType: currentJobType
+        };
+
+        const intent = parseIntent(payload);
+        summaryNode.textContent = intent.summary;
+        panelBadge.textContent = "scan";
+        heroSource.textContent = "hh.ru";
+        magicBox.innerHTML = `
+          <div class="magic-box__state">
+            <div class="pulse"></div>
+            <p>Ищу вакансии...</p>
+          </div>
+        `;
+        resultsMeta.textContent = "";
+        resultsNode.classList.remove("results-grid--widget");
+        resultsNode.innerHTML = "";
+
+        try {
+          const data = await fetchRealJobs(intent);
+          renderMagic(data.intent);
+          panelBadge.textContent = data.meta.fallbackUsed ? "hh widget" : "hh.ru";
+          heroSource.textContent = data.meta.fallbackUsed ? "hh widget" : "hh.ru";
+          resultsMeta.textContent = data.meta.fallbackUsed
+            ? "Вакансии загружены через официальный виджет hh.ru."
+            : "Реальные вакансии hh.ru.";
+          if (data.meta.fallbackUsed) {
+            renderHHWidget(data.intent);
+          } else {
+            renderJobs(data.jobs);
+          }
+        } catch (error) {
+          renderMagic(intent);
+          panelBadge.textContent = "fallback";
+          heroSource.textContent = "fallback";
+          resultsMeta.textContent = "Открой start-job-spell.command";
+          renderHHWidget(intent);
+        }
+      });
+
+      syncLocationVisibility();
+    </script>
+  </body>
+  </html>
