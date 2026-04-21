@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260421b" />
+    <link rel="stylesheet" href="/styles.css?v=20260421o" />
   </head>
   <body>
     <div class="page-shell">
@@ -31,9 +31,9 @@
           </div>
           <div class="hero__preview">
             <div class="preview-card">
-              <span class="preview-card__label">Запрос</span>
-              <strong id="hero-preview-title">дизайн / lead / analytics</strong>
-              <p id="hero-preview-text">Опиши себя и получи подборку.</p>
+              <span class="preview-card__label">Поиск вакансий</span>
+              <strong>Точные совпадения</strong>
+              <p>Подборка обновляется по запросу.</p>
             </div>
           </div>
         </div>
@@ -41,51 +41,16 @@
 
       <main class="layout">
         <section class="panel panel--form">
-          <form id="search-form" class="search-form">
-            <label class="field">
-              <span>Формат</span>
-              <div class="segmented">
-                <button type="button" class="segmented__option is-active" data-mode="remote">
-                  Удаленно
-                </button>
-                <button type="button" class="segmented__option" data-mode="city">
-                  В городе
-                </button>
+          <div class="chat-panel">
+            <div class="chat-panel__top">
+              <div>
+                <p class="panel__eyebrow">Диалог</p>
+                <h2>Ответьте на пару вопросов</h2>
               </div>
-            </label>
-
-            <label class="field is-hidden" id="location-field">
-              <span>Город</span>
-              <input
-                id="location"
-                name="location"
-                type="text"
-                placeholder="Москва"
-                autocomplete="off"
-              />
-            </label>
-
-            <label class="field">
-              <span>Тип</span>
-              <div class="chips" id="job-type">
-                <button type="button" class="chip is-active" data-job-type="all">Все</button>
-                <button type="button" class="chip" data-job-type="project">Проекты</button>
-                <button type="button" class="chip" data-job-type="fulltime">Full-time</button>
-              </div>
-            </label>
-
-            <label class="field">
-              <span>Запрос</span>
-              <textarea
-                id="prompt"
-                name="prompt"
-                rows="7"
-                placeholder="Умею рисовать баннеры и лендинги"
-              ></textarea>
-            </label>
-
-            <button type="submit" class="cta">Найти</button>
-          </form>
+              <button type="button" class="chat-restart" id="chat-restart">Начать заново</button>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+          </div>
         </section>
 
         <section class="panel panel--results">
@@ -127,6 +92,6 @@
       </article>
     </template>
 
-    <script src="/app.js?v=20260421b" defer></script>
+    <script src="/app.js?v=20260421o" defer></script>
   </body>
   </html>

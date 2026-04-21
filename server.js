@@ -24,49 +24,107 @@ const ROLE_PATTERNS = [
     id: "design",
     label: "Дизайн",
     query: "designer OR graphic designer OR ui ux designer OR бренд-дизайнер",
+    widgetTerms: ["дизайнер", "графический дизайнер", "веб-дизайнер", "ui ux дизайнер"],
     words: ["дизайн", "баннер", "бренд", "лендинг", "figma", "ui", "ux", "график", "иллюстр"],
   },
   {
     id: "management",
     label: "Менеджмент",
     query: "project manager OR product manager OR team lead OR delivery manager",
+    widgetTerms: ["project manager", "product manager", "руководитель", "тимлид"],
     words: ["руковод", "менедж", "lead", "лид", "управ", "product", "project", "delivery"],
   },
   {
     id: "frontend",
     label: "Frontend",
     query: "frontend OR react OR javascript OR typescript",
+    widgetTerms: ["frontend", "react developer", "frontend developer", "javascript"],
     words: ["frontend", "react", "javascript", "typescript", "верст", "фронтенд"],
   },
   {
     id: "backend",
     label: "Backend",
     query: "backend OR node.js OR python OR golang OR java",
+    widgetTerms: ["backend", "node.js", "python developer", "backend developer"],
     words: ["backend", "node", "python", "golang", "java", "бекенд", "api", "сервер"],
   },
   {
     id: "marketing",
     label: "Маркетинг",
     query: "marketing OR performance marketing OR smm OR content manager",
+    widgetTerms: ["маркетолог", "performance marketing", "smm", "контент-менеджер"],
     words: ["маркет", "smm", "контент", "трафик", "реклама", "brand", "seo"],
   },
   {
     id: "copywriting",
     label: "Тексты",
     query: "copywriter OR content writer OR editor",
+    widgetTerms: ["копирайтер", "редактор", "content writer", "автор"],
     words: ["копирай", "редакт", "текст", "writer", "editor", "контент"],
   },
   {
     id: "analytics",
     label: "Аналитика",
     query: "analyst OR data analyst OR business analyst",
+    widgetTerms: ["аналитик", "data analyst", "business analyst", "sql analyst"],
     words: ["аналит", "sql", "дашборд", "bi", "данн", "excel"],
   },
   {
     id: "sales",
     label: "Продажи",
     query: "sales manager OR account manager OR business development",
+    widgetTerms: ["менеджер по продажам", "sales manager", "account manager"],
     words: ["продаж", "sales", "account", "bizdev", "аккаунт"],
+  },
+];
+
+const ROLE_BLACKLISTS = {
+  design: ["продав", "sales", "кассир", "мерчендайзер", "оператор call", "кладовщик"],
+  management: ["кассир", "курьер", "продав", "оператор склада"],
+  frontend: ["продав", "кассир", "оператор", "менеджер по продажам"],
+  backend: ["продав", "кассир", "оператор", "дизайнер"],
+  marketing: ["кассир", "кладовщик", "продавец-консультант"],
+  copywriting: ["продав", "кассир", "оператор склада"],
+  analytics: ["продав", "кассир", "дизайнер"],
+  sales: [],
+};
+
+const EXACT_TECH_RULES = [
+  {
+    name: "c++",
+    include: ["c++", "cpp", "c plus plus", "qt", "stl", "boost"],
+    strongInclude: ["c++", "cpp", "c plus plus"],
+    exclude: ["c#", ".net", "asp.net", "1c", "1с", "unity"],
+  },
+  {
+    name: "c#",
+    include: ["c#", ".net", "asp.net", "dotnet"],
+    strongInclude: ["c#", ".net", "asp.net", "dotnet"],
+    exclude: ["c++", "cpp", "1c", "1с"],
+  },
+  {
+    name: "1c",
+    include: ["1c", "1с"],
+    strongInclude: ["1c", "1с"],
+    exclude: ["c++", "cpp", "c#", ".net"],
+  },
+  {
+    name: "python",
+    include: ["python", "django", "fastapi", "flask"],
+    strongInclude: ["python"],
+    exclude: ["1c", "1с"],
+  },
+  {
+    name: "java",
+    include: ["java", "spring"],
+    strongInclude: ["java", "spring"],
+    exclude: ["javascript"],
+  },
+  {
+    name: "javascript",
+    include: ["javascript", "js", "node.js", "nodejs", "react", "vue"],
+    strongInclude: ["javascript", "node.js", "nodejs", "react", "vue"],
+    exclude: ["java"],
   },
 ];
 
@@ -111,8 +169,33 @@ function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function normalizeTechAliases(text) {
+  return String(text || "")
+    .replace(/[Сс](?=\+\+)/g, "C")
+    .replace(/[Сс](?=#)/g, "C")
+    .replace(/1[Сс]/g, "1C")
+    .replace(/[Сс]\s*\+\+/g, "C++")
+    .replace(/[Сс]\s*#/g, "C#")
+    .replace(/джаваскрипт/gi, "javascript")
+    .replace(/яваскрипт/gi, "javascript")
+    .replace(/джава/gi, "java")
+    .replace(/жава/gi, "java")
+    .replace(/питон/gi, "python")
+    .replace(/шарп/gi, "c#")
+    .replace(/си плюс плюс/gi, "c++")
+    .replace(/плюсы/gi, "c++");
+}
+
+function detectExactTechs(text) {
+  const haystack = ` ${normalizeTechAliases(text).toLowerCase()} `;
+  return EXACT_TECH_RULES.filter((rule) =>
+    rule.strongInclude.some((token) => haystack.includes(` ${token} `) || haystack.includes(token))
+  );
+}
+
 function parseIntent({ prompt = "", location = "", mode = "remote", jobType = "all" }) {
-  const tokens = tokenize([prompt, location].join(" "));
+  const normalizedPrompt = normalizeTechAliases(prompt);
+  const tokens = tokenize([normalizedPrompt, location].join(" "));
   const tokenText = tokens.join(" ");
 
   const matchedRoles = ROLE_PATTERNS.filter((role) =>
@@ -155,8 +238,9 @@ function parseIntent({ prompt = "", location = "", mode = "remote", jobType = "a
     summary: mode === "remote" ? `Удаленно · ${mood}` : `${location || "Город"} · ${mood}`,
     roleLabels: matchedRoles.map((role) => role.label),
     skills: skillHints,
+    exactTechs: detectExactTechs(normalizedPrompt),
     query: finalQuery.trim(),
-    originalPrompt: prompt.trim(),
+    originalPrompt: normalizedPrompt.trim(),
     mode,
     jobType,
     location,
@@ -167,8 +251,12 @@ async function fetchJson(url, options = {}) {
   const defaultUserAgent =
     process.env.HH_USER_AGENT ||
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+  const timeoutMs = options.timeoutMs || 8000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const response = await fetch(url, {
     ...options,
+    signal: controller.signal,
     headers: {
       "User-Agent": defaultUserAgent,
       Accept: "application/json",
@@ -176,6 +264,7 @@ async function fetchJson(url, options = {}) {
       ...(options.headers || {}),
     },
   });
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -189,8 +278,12 @@ async function fetchText(url, options = {}) {
   const defaultUserAgent =
     process.env.HH_USER_AGENT ||
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+  const timeoutMs = options.timeoutMs || 8000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const response = await fetch(url, {
     ...options,
+    signal: controller.signal,
     headers: {
       "User-Agent": defaultUserAgent,
       Accept: "*/*",
@@ -198,6 +291,7 @@ async function fetchText(url, options = {}) {
       ...(options.headers || {}),
     },
   });
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -205,6 +299,96 @@ async function fetchText(url, options = {}) {
   }
 
   return response.text();
+}
+
+async function retry(operation, attempts = 3, delayMs = 500) {
+  let lastError;
+
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (index < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs * (index + 1)));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function enrichIntentWithAI(intent) {
+  if (!process.env.OPENAI_API_KEY) {
+    return intent;
+  }
+
+  const response = await retry(async () => {
+    const apiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-5-mini",
+        input: [
+          {
+            role: "system",
+            content: [
+              {
+                type: "input_text",
+                text:
+                  "Ты разбираешь поисковый запрос для вакансий. Верни только JSON без markdown. Нужны поля: role_labels (массив строк), must_have_terms (массив строк), should_have_terms (массив строк), exclude_terms (массив строк), summary (строка). Если пользователь указал конкретный стек, например C++, Java, Python, 1C, C#, то must_have_terms должны включать только этот стек и exclude_terms должны включать близкие, но неверные стеки.",
+              },
+            ],
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: JSON.stringify({
+                  prompt: intent.originalPrompt,
+                  mode: intent.mode,
+                  location: intent.location,
+                  roleLabels: intent.roleLabels,
+                  skills: intent.skills,
+                  exactTechs: intent.exactTechs.map((rule) => rule.name),
+                }),
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!apiResponse.ok) {
+      const text = await apiResponse.text();
+      throw new Error(`OpenAI failed with ${apiResponse.status}: ${text}`);
+    }
+
+    return apiResponse.json();
+  }, 2, 700);
+
+  const outputText =
+    response.output_text ||
+    response.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("") ||
+    "";
+
+  try {
+    const parsed = JSON.parse(outputText);
+    return {
+      ...intent,
+      roleLabels: unique([...(intent.roleLabels || []), ...((parsed.role_labels || []).filter(Boolean))]),
+      mustHaveTerms: unique(parsed.must_have_terms || []),
+      shouldHaveTerms: unique(parsed.should_have_terms || []),
+      excludeTerms: unique(parsed.exclude_terms || []),
+      summary: parsed.summary || intent.summary,
+    };
+  } catch {
+    return intent;
+  }
 }
 
 function normalizeSalary(from, to, currency) {
@@ -269,6 +453,27 @@ function stripTags(input) {
   return decodeHtmlEntities(String(input || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
 }
 
+function buildWidgetQueries(intent) {
+  const matchedRoles = ROLE_PATTERNS.filter((role) => intent.roleLabels.includes(role.label));
+  const roleTerms = matchedRoles.flatMap((role) => role.widgetTerms || []);
+  const skillTerms = intent.skills.filter((skill) => skill.length > 3);
+  const exactTerms = intent.exactTechs.flatMap((rule) => rule.strongInclude.slice(0, 2));
+  const mustHaveTerms = intent.mustHaveTerms || [];
+  const shouldHaveTerms = intent.shouldHaveTerms || [];
+  const locationSuffix = intent.mode === "remote" ? " удаленно" : intent.location ? ` ${intent.location}` : "";
+
+  return unique([
+    ...mustHaveTerms.map((term) => `${term}${locationSuffix}`.trim()),
+    ...shouldHaveTerms.map((term) => `${term}${locationSuffix}`.trim()),
+    ...exactTerms.map((term) => `${term}${locationSuffix}`.trim()),
+    ...roleTerms.map((term) => `${term}${locationSuffix}`.trim()),
+    `${(roleTerms[0] || skillTerms[0] || intent.originalPrompt || "работа").trim()}${locationSuffix}`.trim(),
+    `${skillTerms.slice(0, 2).join(" ")}${locationSuffix}`.trim(),
+    intent.originalPrompt,
+    intent.location && intent.mode !== "remote" ? `${skillTerms[0] || roleTerms[0] || "работа"} ${intent.location}`.trim() : "",
+  ]).filter((query) => query && query.trim().length > 1);
+}
+
 function parseHHWidgetPayload(scriptText) {
   const match = scriptText.match(/div\.innerHTML = '([\s\S]*?)'\s*\.replace\(/);
   if (!match) {
@@ -303,27 +508,26 @@ function parseHHWidgetPayload(scriptText) {
 }
 
 async function searchHeadHunterWidget(intent) {
-  const fallbackQueries = unique([
-    intent.originalPrompt,
-    [intent.roleLabels[0], intent.location].filter(Boolean).join(" "),
-    intent.skills.slice(0, 3).join(" "),
-    intent.mode === "remote"
-      ? `${intent.roleLabels[0] || intent.skills[0] || "дизайн"} удаленно`
-      : [intent.roleLabels[0] || intent.skills[0] || "работа", intent.location].filter(Boolean).join(" "),
-  ]).filter((query) => query && query.trim().length > 1);
+  const fallbackQueries = buildWidgetQueries(intent);
 
   const batches = await Promise.allSettled(
-    fallbackQueries.slice(0, 3).map(async (query) => {
+    fallbackQueries.slice(0, 4).map(async (query) => {
       const widgetUrl = new URL("https://api.hh.ru/widgets/vacancies/search");
       widgetUrl.searchParams.set("text", query);
       widgetUrl.searchParams.set("count", "6");
       widgetUrl.searchParams.set("debug_mode", "true");
 
-      const scriptText = await fetchText(widgetUrl.toString(), {
-        headers: {
-          Referer: "https://dev.hh.ru/admin/widgets/search",
-        },
-      });
+      const scriptText = await retry(
+        () =>
+          fetchText(widgetUrl.toString(), {
+            headers: {
+              Referer: "https://dev.hh.ru/admin/widgets/search",
+            },
+            timeoutMs: 8000,
+          }),
+        3,
+        600
+      );
 
       return parseHHWidgetPayload(scriptText);
     })
@@ -397,29 +601,72 @@ function buildFallbackJobs(intent) {
 }
 
 function scoreJob(job, intent) {
-  const haystack = tokenize([job.title, job.company, job.snippet, job.location].join(" ")).join(" ");
+  const haystackTokens = tokenize([job.title, job.company, job.snippet, job.location].join(" "));
+  const haystack = haystackTokens.join(" ");
+  const titleText = tokenize(job.title).join(" ");
+  const matchedRoles = ROLE_PATTERNS.filter((role) => intent.roleLabels.includes(role.label));
   let score = 0;
+
+  intent.exactTechs.forEach((rule) => {
+    const hasStrongInclude = rule.strongInclude.some((token) => haystack.includes(token));
+    const hasInclude = rule.include.some((token) => haystack.includes(token));
+    const hasExclude = rule.exclude.some((token) => haystack.includes(token));
+
+    if (hasStrongInclude) score += 40;
+    else if (hasInclude) score += 18;
+    else score -= 35;
+
+    if (hasExclude) score -= 45;
+  });
 
   intent.skills.forEach((skill) => {
     if (haystack.includes(skill.toLowerCase())) {
-      score += 4;
+      score += 5;
     }
   });
 
-  intent.roleLabels.forEach((role) => {
-    if (haystack.includes(role.toLowerCase())) {
-      score += 6;
-    }
+  matchedRoles.forEach((role) => {
+    role.words.forEach((word) => {
+      if (titleText.includes(word) || haystack.includes(word)) {
+        score += titleText.includes(word) ? 12 : 6;
+      }
+    });
   });
 
   if (intent.mode === "remote" && haystack.includes("удален")) score += 3;
   if (intent.location && haystack.includes(intent.location.toLowerCase())) score += 2;
-  if (job.source === "demo") score -= 2;
+  if (job.source === "demo") score -= 8;
+
+  (intent.mustHaveTerms || []).forEach((term) => {
+    if (haystack.includes(term.toLowerCase())) score += 35;
+    else score -= 40;
+  });
+
+  (intent.shouldHaveTerms || []).forEach((term) => {
+    if (haystack.includes(term.toLowerCase())) score += 10;
+  });
+
+  (intent.excludeTerms || []).forEach((term) => {
+    if (haystack.includes(term.toLowerCase())) score -= 50;
+  });
+
+  matchedRoles.forEach((role) => {
+    (ROLE_BLACKLISTS[role.id] || []).forEach((blackWord) => {
+      if (haystack.includes(blackWord)) {
+        score -= 15;
+      }
+    });
+  });
+
+  if (matchedRoles.length && matchedRoles.every((role) => !role.words.some((word) => haystack.includes(word)))) {
+    score -= 10;
+  }
+
   return score;
 }
 
 async function aggregateJobs(payload) {
-  const intent = parseIntent(payload);
+  const intent = await enrichIntentWithAI(parseIntent(payload));
   const jobs = [];
   const sourceMeta = [];
   let primaryFailed = false;
@@ -455,8 +702,17 @@ async function aggregateJobs(payload) {
     .map((job) => ({ ...job, score: scoreJob(job, intent) }))
     .sort((a, b) => b.score - a.score || String(b.publishedAt).localeCompare(String(a.publishedAt)));
 
-  const finalJobs = ranked.length ? ranked.slice(0, 12) : buildFallbackJobs(intent);
-  const fallbackUsed = !ranked.length;
+  const relevantJobs = ranked.filter((job) => {
+    if (intent.exactTechs.length) {
+      return job.score >= 15;
+    }
+    if (intent.roleLabels.length) {
+      return job.score >= 2;
+    }
+    return true;
+  });
+  const finalJobs = relevantJobs.length ? relevantJobs.slice(0, 20) : buildFallbackJobs(intent);
+  const fallbackUsed = !relevantJobs.length;
 
   return {
     intent,
@@ -519,7 +775,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && requestUrl.pathname === "/api/search") {
     try {
       const payload = await safeReadJson(req);
-      const result = await aggregateJobs(payload);
+      const result = await retry(() => aggregateJobs(payload), 2, 900);
       sendJson(res, 200, result);
     } catch (error) {
       sendJson(res, 500, {
