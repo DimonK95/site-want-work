@@ -312,8 +312,16 @@ function renderJobs(jobs) {
     fragment.querySelector(".job-card__source").textContent = job.source;
     fragment.querySelector("h3").textContent = job.title;
     fragment.querySelector(".job-card__company").textContent = job.company;
-    fragment.querySelector(".job-card__details").textContent = `${job.location} · ${job.format} · ${job.salary}`;
-    fragment.querySelector(".job-card__snippet").innerHTML = job.snippet;
+    const details = [job.location, job.format, job.salary].filter(Boolean).join(" · ");
+    fragment.querySelector(".job-card__details").textContent = details;
+    const companyInfoNode = fragment.querySelector(".job-card__company-info");
+    const companyInfo = String(job.companyInfo || "").trim();
+    if (companyInfo) {
+      companyInfoNode.textContent = companyInfo;
+    } else {
+      companyInfoNode.remove();
+    }
+    fragment.querySelector(".job-card__snippet").textContent = job.snippet || "";
     fragment.querySelector(".job-card__score").textContent =
       typeof job.score === "number" ? `Соответствие ${Math.max(72, 72 + job.score)}%` : "Соответствие";
     fragment.querySelector(".job-card__link").href = job.url;

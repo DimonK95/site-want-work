@@ -627,9 +627,14 @@ textarea {
 
 .job-card__company,
 .job-card__details,
-.job-card__snippet {
+.job-card__snippet,
+.job-card__company-info {
   margin: 0;
   line-height: 1.6;
+}
+
+.job-card__company-info {
+  color: var(--accent-3);
 }
 
 .job-card__link {

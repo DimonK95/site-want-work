@@ -422,7 +422,13 @@ async function searchHeadHunter(intent) {
     format: item.schedule?.name || (intent.mode === "remote" ? "Удаленно" : "Формат не указан"),
     salary: normalizeSalary(item.salary?.from, item.salary?.to, item.salary?.currency),
     url: item.alternate_url,
-    snippet: item.snippet?.requirement || item.snippet?.responsibility || "Описание откроется на hh.ru",
+    snippet: cleanSnippetText(
+      item.snippet?.requirement || item.snippet?.responsibility || "Описание откроется на hh.ru",
+      item.employer?.name || "",
+      normalizeSalary(item.salary?.from, item.salary?.to, item.salary?.currency)
+    ),
+    requirement: item.snippet?.requirement || "",
+    responsibility: item.snippet?.responsibility || "",
     publishedAt: item.published_at,
   }));
 }
@@ -451,6 +457,283 @@ function decodeHtmlEntities(input) {
 
 function stripTags(input) {
   return decodeHtmlEntities(String(input || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+}
+
+function truncateText(text, maxLength = 120) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  if (clean.length <= maxLength) return clean;
+  return `${clean.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function truncateToSentence(text, maxLength = 120) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  if (clean.length <= maxLength) return clean;
+
+  const withinLimit = clean.slice(0, maxLength);
+  const punctuationIndex = Math.max(
+    withinLimit.lastIndexOf("."),
+    withinLimit.lastIndexOf("!"),
+    withinLimit.lastIndexOf("?")
+  );
+
+  if (punctuationIndex >= 20) {
+    return withinLimit.slice(0, punctuationIndex + 1).trim();
+  }
+
+  const sentences = clean.match(/[^.!?]+[.!?]+/g) || [];
+  const firstSentence = sentences.find((sentence) => sentence.trim().length > 20);
+  if (firstSentence) {
+    return firstSentence.trim();
+  }
+
+  return truncateText(clean, maxLength);
+}
+
+function formatTaskSummary(text) {
+  const clean = stripTags(text)
+    .replace(/^требования?:?\s*/i, "")
+    .replace(/^обязанности?:?\s*/i, "")
+    .replace(/^задачи:?\s*/i, "")
+    .trim();
+  return truncateText(clean, 132);
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function cleanSnippetText(text, company = "", salary = "") {
+  let clean = stripTags(text);
+  if (!clean) return "";
+
+  if (salary) {
+    clean = clean.replace(new RegExp(escapeRegExp(salary), "gi"), " ");
+  }
+
+  if (company) {
+    clean = clean.replace(new RegExp(escapeRegExp(company), "gi"), " ");
+  }
+
+  clean = clean
+    .replace(/\b(от|до)\s*\d[\d\s.,]*[₽$€₸]?/gi, " ")
+    .replace(/[\d\s]+[₽$€₸]/g, " ")
+    .replace(/\s*,\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return clean;
+}
+
+function inferBusinessArea(text) {
+  const haystack = normalizeTechAliases(text).toLowerCase();
+
+  if (/(c\+\+|cpp|c#|\.net|java|spring|python|django|flask|fastapi|backend|frontend|react|node|golang|developer|разработ)/.test(haystack)) {
+    return "ИТ и разработка";
+  }
+  if (/(designer|дизайн|ui|ux|figma|баннер|бренд|графич|иллюстр|лендинг)/.test(haystack)) {
+    return "Дизайн и digital";
+  }
+  if (/(marketing|маркет|smm|seo|трафик|контент|brand)/.test(haystack)) {
+    return "Маркетинг и продвижение";
+  }
+  if (/(аналит|sql|bi|data|дашборд|excel)/.test(haystack)) {
+    return "Аналитика и данные";
+  }
+  if (/(sales|продаж|account|bizdev|аккаунт)/.test(haystack)) {
+    return "Продажи и развитие";
+  }
+  if (/(manager|менедж|руковод|lead|product|project|delivery)/.test(haystack)) {
+    return "Управление и координация";
+  }
+  if (/(копирай|редактор|текст|writer|editor|контент)/.test(haystack)) {
+    return "Контент и тексты";
+  }
+
+  return "Команда и продукт";
+}
+
+function buildCompanyActivity({ company, title, snippet, intent }) {
+  return truncateToSentence(
+    inferBusinessArea([title, snippet, intent?.originalPrompt].join(" ")),
+    96
+  );
+}
+
+function buildTaskLine({ title, snippet }) {
+  const fromSnippet = formatTaskSummary(snippet);
+  if (fromSnippet) return fromSnippet;
+  return truncateText(`Рабочие задачи по роли «${title}». Подробности откроются на hh.ru.`, 132);
+}
+
+function enrichJobCard(job, intent) {
+  return {
+    ...job,
+    companyInfo: buildCompanyActivity({
+      company: job.company,
+      title: job.title,
+      snippet: job.snippet,
+      intent,
+    }),
+    responsibilities: buildTaskLine({
+      title: job.title,
+      snippet: job.responsibility || job.requirement || job.snippet,
+    }),
+  };
+}
+
+function buildHeuristicVacancySummary({ company, title, companyText, descriptionText, snippet }) {
+  const companyLine = pickCompanyLine(companyText, company);
+  const taskLine = pickTaskLine(descriptionText || snippet || "", title);
+
+  if (companyLine && taskLine) {
+    return truncateText(`${companyLine} Сейчас нужен человек, который ${taskLine.charAt(0).toLowerCase()}${taskLine.slice(1)}`, 170);
+  }
+  if (taskLine) {
+    return truncateText(taskLine, 170);
+  }
+  if (companyLine) {
+    return truncateText(companyLine, 170);
+  }
+  return "";
+}
+
+function extractVacancyId(job) {
+  const fromId = String(job.id || "").match(/(\d+)/);
+  if (fromId) return fromId[1];
+  const fromUrl = String(job.url || "").match(/vacancy\/(\d+)/);
+  return fromUrl ? fromUrl[1] : "";
+}
+
+function extractJsonLdDescription(html) {
+  const scripts = String(html || "").match(/<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi) || [];
+  for (const script of scripts) {
+    const raw = script.replace(/^<script[^>]*>/i, "").replace(/<\/script>$/i, "").trim();
+    try {
+      const parsed = JSON.parse(raw);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const jobPosting = items.find((item) => item && (item["@type"] === "JobPosting" || item["@type"] === "Organization"));
+      if (jobPosting?.description) return stripTags(jobPosting.description);
+      if (jobPosting?.hiringOrganization?.description) return stripTags(jobPosting.hiringOrganization.description);
+    } catch {}
+  }
+  return "";
+}
+
+function extractMetaDescription(html) {
+  const match = String(html || "").match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"]+)["']/i);
+  return match ? stripTags(match[1]) : "";
+}
+
+function pickCompanyLine(text, company) {
+  const clean = stripTags(text);
+  if (!clean) return "";
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const companyPattern = new RegExp(company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const preferred = sentences.find((line) =>
+    line.length > 30 &&
+    line.length < 150 &&
+    (companyPattern.test(line) || /(компан|продукт|сервис|платформ|студ|агентств|банк|маркетплейс|финтех|ритейл|команда)/i.test(line))
+  );
+  return truncateToSentence(preferred || "", 108);
+}
+
+function pickTaskLine(text, title) {
+  const clean = stripTags(text);
+  if (!clean) return "";
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const preferred = sentences.find((line) =>
+    line.length > 30 &&
+    line.length < 170 &&
+    /(разработ|созда|поддерж|улучш|вести|проектир|аналити|рисова|верста|писат|тестир|автоматиз|коммуниц|управля|сопровож)/i.test(line)
+  );
+  if (preferred) return truncateText(preferred, 132);
+  return buildTaskLine({ title, snippet: clean });
+}
+
+async function fetchVacancyDetails(job) {
+  if (job.source !== "hh.ru" || !job.url || String(job.url).includes("/search/")) {
+    return {};
+  }
+
+  const vacancyId = extractVacancyId(job);
+  let descriptionText = "";
+  let companyText = "";
+
+  if (vacancyId) {
+    try {
+      const detail = await fetchJson(`https://api.hh.ru/vacancies/${vacancyId}`, {
+        headers: {
+          Referer: job.url,
+        },
+        timeoutMs: 8000,
+      });
+      descriptionText = stripTags(detail.description || "");
+      companyText = stripTags(detail.employer?.description || "");
+    } catch {}
+  }
+
+  if (!descriptionText || !companyText) {
+    try {
+      const html = await fetchText(job.url, {
+        headers: {
+          Referer: "https://hh.ru/search/vacancy",
+        },
+        timeoutMs: 8000,
+      });
+      descriptionText = descriptionText || extractJsonLdDescription(html) || extractMetaDescription(html);
+      companyText = companyText || extractJsonLdDescription(html);
+    } catch {}
+  }
+
+  return {
+    descriptionText,
+    companyText,
+  };
+}
+
+async function hydrateJobs(jobs, intent) {
+  const topJobs = jobs.slice(0, 6);
+  const detailsByUrl = new Map();
+
+  await Promise.allSettled(
+    topJobs.map(async (job) => {
+      const details = await fetchVacancyDetails(job);
+      detailsByUrl.set(job.url, details);
+    })
+  );
+
+  return jobs.map((job) => {
+    const details = detailsByUrl.get(job.url) || {};
+    const companyInfo =
+      job.source === "hh.ru"
+        ? truncateToSentence(
+            pickCompanyLine(details.companyText || details.descriptionText || "", job.company) ||
+              buildCompanyActivity({
+                company: job.company,
+                title: job.title,
+                snippet: details.descriptionText || job.snippet,
+                intent,
+              }),
+            72
+          )
+        : "";
+
+    return {
+      ...enrichJobCard(job, intent),
+      companyInfo,
+      responsibilities: "",
+      vacancySummary: "",
+      companyTag: "",
+    };
+  });
 }
 
 function buildWidgetQueries(intent) {
@@ -496,10 +779,16 @@ function parseHHWidgetPayload(scriptText) {
       title: decodeHtmlEntities(title).trim(),
       company: description.split(",").map((part) => part.trim()).filter(Boolean).slice(-1)[0] || "Компания не указана",
       location: "hh.ru",
-      format: "Через HH",
+      format: "",
       salary: salaryMatch ? salaryMatch[1].trim() : "Не указана",
       url,
-      snippet: description || "Открой вакансию на hh.ru",
+      snippet: cleanSnippetText(
+        description || "Открой вакансию на hh.ru",
+        description.split(",").map((part) => part.trim()).filter(Boolean).slice(-1)[0] || "",
+        salaryMatch ? salaryMatch[1].trim() : ""
+      ),
+      requirement: "",
+      responsibility: "",
       publishedAt: new Date().toISOString(),
     });
   }
@@ -569,6 +858,8 @@ function buildFallbackJobs(intent) {
       salary: "Живые результаты",
       url: queryUrl.toString(),
       snippet: `Запрос: ${query}. Это реальный поиск на hh.ru.`,
+      requirement: "",
+      responsibility: "",
       publishedAt: new Date().toISOString(),
     },
     {
@@ -583,6 +874,8 @@ function buildFallbackJobs(intent) {
       snippet: intent.mode === "remote"
         ? "Открывает реальный удаленный поиск на hh.ru."
         : "Открывает поиск на hh.ru с уточнением по городу.",
+      requirement: "",
+      responsibility: "",
       publishedAt: new Date().toISOString(),
     },
     {
@@ -595,6 +888,8 @@ function buildFallbackJobs(intent) {
       salary: "Живые результаты",
       url: strictUrl.toString(),
       snippet: "Запасной переход в настоящий поиск HH, если API не пропускает запрос.",
+      requirement: "",
+      responsibility: "",
       publishedAt: new Date().toISOString(),
     },
   ];
@@ -711,7 +1006,10 @@ async function aggregateJobs(payload) {
     }
     return true;
   });
-  const finalJobs = relevantJobs.length ? relevantJobs.slice(0, 20) : buildFallbackJobs(intent);
+  const finalJobs = await hydrateJobs(
+    relevantJobs.length ? relevantJobs.slice(0, 20) : buildFallbackJobs(intent),
+    intent
+  );
   const fallbackUsed = !relevantJobs.length;
 
   return {
